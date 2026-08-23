@@ -1,0 +1,57 @@
+# Default stack is completely free: SQLite + rule-based AI + mock providers.
+# Uncomment the postgres service (and DATABASE_URL) for a production-shaped run.
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: swap-agent-backend
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////data/swap_agent.db}
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend-data:/data
+      - ./training:/app/training
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: swap-agent-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+
+  # ---- Optional: PostgreSQL for production ----
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: swap-agent-db
+  #   environment:
+  #     POSTGRES_USER: swap
+  #     POSTGRES_PASSWORD: swap
+  #     POSTGRES_DB: swapagent
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #
+  # ---- Optional: Ollama for a free local LLM ----
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: swap-agent-ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama:/root/.ollama
+
+volumes:
+  backend-data:
+  # pgdata:
+  # ollama:
