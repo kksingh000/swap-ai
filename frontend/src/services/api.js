@@ -69,6 +69,15 @@ export const api = {
 }
 
 export function websocketUrl() {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${protocol}//${window.location.host}${BASE}/ws`
+  // Resolve against BASE, not just window.location: in production the API
+  // lives on a different origin (Render) than the frontend (Vercel), so a
+  // same-origin assumption here would silently point the socket at nothing.
+  try {
+    const url = new URL(BASE, window.location.origin)
+    const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${protocol}//${url.host}${url.pathname.replace(/\/$/, '')}/ws`
+  } catch {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${protocol}//${window.location.host}${BASE}/ws`
+  }
 }

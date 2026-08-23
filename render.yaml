@@ -1,0 +1,40 @@
+# One-click Render Blueprint for the FastAPI backend.
+# Deploy: https://render.com/deploy?repo=https://github.com/kksingh000/swap-ai
+#
+# Free tier only. No secrets required — LLM stays in deterministic rules
+# mode, telephony/WhatsApp stay mocked, exactly like local defaults. Add
+# real provider keys from the Render dashboard's Environment tab any time.
+services:
+  - type: web
+    name: swap-ai-backend
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: >
+      pip install -r requirements.txt &&
+      python ../training/generate_dataset.py --samples 180 &&
+      python ../training/train_classifier.py
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: DATABASE_URL
+        value: sqlite:///./swap_agent.db
+      - key: CORS_ORIGINS
+        value: https://swap-ai.vercel.app,http://localhost:5173
+      - key: PUBLIC_BASE_URL
+        value: https://swap-ai-backend.onrender.com
+      - key: LLM_PROVIDER
+        value: rules
+      - key: TELEPHONY_PROVIDER
+        value: mock
+      - key: WHATSAPP_PROVIDER
+        value: mock
+      - key: TIMEZONE
+        value: Asia/Kolkata
