@@ -11,6 +11,7 @@ import httpx
 
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.services.twilio_auth import twilio_auth, twilio_configured, twilio_credential_style
 from app.services.whatsapp.base import WhatsAppProvider
 
 log = get_logger(__name__)
@@ -59,11 +60,11 @@ class TwilioWhatsAppProvider(WhatsAppProvider):
         return number if number.startswith("whatsapp:") else f"whatsapp:{number}"
 
     async def _post(self, data: Dict[str, str]) -> Dict[str, Any]:
-        if not (self.sid and self.token):
+        if not twilio_configured():
             return {"status": "failed", "provider": self.name, "error": "Twilio credentials missing"}
         try:
             async with httpx.AsyncClient(timeout=20) as client:
-                resp = await client.post(self.base, data=data, auth=(self.sid, self.token))
+                resp = await client.post(self.base, data=data, auth=twilio_auth())
             payload = resp.json()
             if resp.status_code >= 400:
                 return {
@@ -101,6 +102,7 @@ class TwilioWhatsAppProvider(WhatsAppProvider):
         return {
             "provider": self.name,
             "live": True,
-            "configured": bool(self.sid and self.token),
+            "configured": twilio_configured(),
+            "credential_style": twilio_credential_style(),
             "from": self.from_number,
         }

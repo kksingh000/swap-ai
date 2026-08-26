@@ -17,6 +17,7 @@ import httpx
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.services.telephony.base import TelephonyProvider
+from app.services.twilio_auth import twilio_auth, twilio_configured, twilio_credential_style
 
 log = get_logger(__name__)
 
@@ -58,7 +59,7 @@ class TwilioProvider(TelephonyProvider):
 
     @property
     def configured(self) -> bool:
-        return bool(self.sid and self.token and self.from_number)
+        return twilio_configured() and bool(self.from_number)
 
     async def make_call(
         self,
@@ -88,7 +89,7 @@ class TwilioProvider(TelephonyProvider):
         try:
             async with httpx.AsyncClient(timeout=25) as client:
                 resp = await client.post(
-                    f"{self.base}/Calls.json", data=data, auth=(self.sid, self.token)
+                    f"{self.base}/Calls.json", data=data, auth=twilio_auth()
                 )
             payload = resp.json()
             if resp.status_code >= 400:
@@ -113,7 +114,7 @@ class TwilioProvider(TelephonyProvider):
                 resp = await client.post(
                     f"{self.base}/Calls/{call_sid}.json",
                     data={"Status": "completed"},
-                    auth=(self.sid, self.token),
+                    auth=twilio_auth(),
                 )
             return {"status": "completed" if resp.status_code < 400 else "failed", "call_sid": call_sid}
         except Exception as exc:  # noqa: BLE001
@@ -124,6 +125,7 @@ class TwilioProvider(TelephonyProvider):
             "provider": self.name,
             "live": True,
             "configured": self.configured,
+            "credential_style": twilio_credential_style(),
             "from": self.from_number,
             "webhook_base": settings.PUBLIC_BASE_URL,
         }

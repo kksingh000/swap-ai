@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     TELEPHONY_PROVIDER: str = "mock"  # mock | twilio
     TWILIO_ACCOUNT_SID: str = ""
     TWILIO_AUTH_TOKEN: str = ""
+    # Preferred over the auth token: scoped, individually revocable API keys.
+    TWILIO_API_KEY_SID: str = ""
+    TWILIO_API_KEY_SECRET: str = ""
     TWILIO_PHONE_NUMBER: str = ""
     TWILIO_VOICE: str = "Polly.Aditi"  # Indian-English neural-ish voice
     TWILIO_STT_LANGUAGE: str = "en-IN"
