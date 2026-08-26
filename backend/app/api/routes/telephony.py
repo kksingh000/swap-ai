@@ -16,7 +16,7 @@ from app.core.logging import get_logger
 from app.db.session import get_db
 from app.models import Call, Customer
 from app.services import customer_service
-from app.services.conversation.engine import ConversationEngine
+from app.services.conversation.engine import OPENING_LANGUAGE, ConversationEngine
 from app.services.telephony.providers import twiml_say_and_gather, twiml_say_and_hangup
 
 log = get_logger(__name__)
@@ -80,7 +80,7 @@ async def twilio_voice(
             customer, mode="phone", provider="twilio", provider_call_sid=CallSid
         )
         return Response(
-            content=twiml_say_and_gather(opening, _action_url(call.id), customer.preferred_language),
+            content=twiml_say_and_gather(opening, _action_url(call.id), OPENING_LANGUAGE),
             media_type=XML,
         )
 
@@ -96,7 +96,7 @@ async def twilio_voice(
         last_agent = [m for m in call.messages if m.role == "agent"]
         opening = last_agent[-1].content if last_agent else engine.responder.opening(customer.name)
         return Response(
-            content=twiml_say_and_gather(opening, _action_url(call.id), customer.preferred_language),
+            content=twiml_say_and_gather(opening, _action_url(call.id), OPENING_LANGUAGE),
             media_type=XML,
         )
 
@@ -108,7 +108,7 @@ async def twilio_voice(
             return Response(content=twiml_say_and_hangup(reply, customer.preferred_language), media_type=XML)
         nudge = "Sorry, I didn't catch that. Are you there?"
         return Response(
-            content=twiml_say_and_gather(nudge, _action_url(call.id), customer.preferred_language),
+            content=twiml_say_and_gather(nudge, _action_url(call.id), customer.preferred_language or OPENING_LANGUAGE),
             media_type=XML,
         )
 

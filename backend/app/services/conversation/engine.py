@@ -41,6 +41,11 @@ log = get_logger(__name__)
 
 STAGE_ORDER = ["opening", "discovery", "qualification", "objection", "action", "closing"]
 
+# The agent always greets in English and then mirrors whatever language the
+# customer actually replies in - detected per turn by the NLU layer. We never
+# guess the customer's language up front.
+OPENING_LANGUAGE = "english"
+
 
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -84,8 +89,8 @@ class ConversationEngine:
         self.db.commit()
         self.db.refresh(call)
 
-        opening = self.responder.opening(customer.name, customer.preferred_language or "english")
-        self._add_message(call, "agent", opening, language=customer.preferred_language)
+        opening = self.responder.opening(customer.name, OPENING_LANGUAGE)
+        self._add_message(call, "agent", opening, language=OPENING_LANGUAGE)
         self.db.commit()
 
         await bus.broadcast(

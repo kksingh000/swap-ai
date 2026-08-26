@@ -20,6 +20,8 @@ def get_or_create(
     name: Optional[str] = None,
     language: str = "english",
 ) -> Customer:
+    """Language defaults to English and is overwritten by what we actually
+    hear on the call - it is never a client-supplied preference."""
     phone = normalise_phone(phone_number)
     customer = db.query(Customer).filter(Customer.phone_number == phone).first()
     if customer is None:
@@ -28,14 +30,8 @@ def get_or_create(
         db.commit()
         db.refresh(customer)
     else:
-        changed = False
         if name and not customer.name:
             customer.name = name
-            changed = True
-        if language and customer.preferred_language != language:
-            customer.preferred_language = language
-            changed = True
-        if changed:
             db.commit()
     return customer
 

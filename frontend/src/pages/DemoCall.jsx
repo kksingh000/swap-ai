@@ -11,18 +11,11 @@ import {
 import { useSpeechRecognition, useSpeechSynthesis } from '../hooks/useSpeech'
 import { api } from '../services/api'
 
-const LANGUAGES = [
-  { value: 'english', label: 'English' },
-  { value: 'hinglish', label: 'Hinglish (mixed)' },
-  { value: 'hindi', label: 'हिंदी / Hindi' },
-]
-
 export default function DemoCall({ lastEvent, health }) {
   const [scenarios, setScenarios] = useState([])
   const [selected, setSelected] = useState(null)
   const [name, setName] = useState('')
-  const [language, setLanguage] = useState('english')
-  const [phoneMode, setPhoneMode] = useState(false)
+  const [phoneMode, setPhoneMode] = useState(true)
   const [phoneNumber, setPhoneNumber] = useState('')
 
   const [call, setCall] = useState(null)
@@ -96,8 +89,12 @@ export default function DemoCall({ lastEvent, health }) {
     if (text?.trim()) submitTurn(text.trim())
   }
 
+  // Mic language mirrors whatever the backend detected from the customer's
+  // last reply, starting from English. Never a manual choice.
+  const detectedLanguage = memory.language || 'english'
+
   const speech = useSpeechRecognition({
-    language,
+    language: detectedLanguage,
     onResult: handleRecognised,
     onError: (error) => push(`Mic error: ${error}`, 'warn'),
   })
@@ -106,8 +103,8 @@ export default function DemoCall({ lastEvent, health }) {
     setStarting(true)
     try {
       const payload = phoneMode
-        ? { customer_name: name || 'Customer', phone_number: phoneNumber, language }
-        : { customer_name: name || undefined, language, scenario: selected?.id }
+        ? { customer_name: name || 'Customer', phone_number: phoneNumber }
+        : { customer_name: name || undefined, scenario: selected?.id }
 
       const result = phoneMode ? await api.startPhoneCall(payload) : await api.startDemoCall(payload)
 
@@ -123,7 +120,7 @@ export default function DemoCall({ lastEvent, health }) {
       setExtracted(null)
       setActions([])
       setWaMessages([])
-      tts.speak(result.opening_message, language)
+      tts.speak(result.opening_message, 'english')
 
       if (phoneMode) {
         const status = result.telephony?.status
@@ -159,7 +156,7 @@ export default function DemoCall({ lastEvent, health }) {
         const ids = new Set(current.map((a) => a.action_id))
         return [...current, ...result.actions.filter((a) => !ids.has(a.action_id))]
       })
-      tts.speak(result.reply, result.memory?.language || language)
+      tts.speak(result.reply, result.memory?.language || 'english')
 
       if (result.should_end) {
         push('Agent closed the call.', 'info')
@@ -227,6 +224,9 @@ export default function DemoCall({ lastEvent, health }) {
     [memory],
   )
 
+  const telephony = health?.components?.telephony || {}
+  const telephonyReady = Boolean(telephony.configured && telephony.live)
+
   // ---------------- Pre-call setup ----------------
   if (!call) {
     return (
@@ -235,16 +235,32 @@ export default function DemoCall({ lastEvent, health }) {
         <div className="banner">
           <span>💡</span>
           <div>
-            <strong>Demo mode is completely free.</strong> Speech recognition and speech synthesis run
-            in your browser via the Web Speech API — no telephony minutes, no STT/TTS bill. Everything
-            else (NLU, scoring, actions, WhatsApp simulation) is the exact same backend a real phone
-            call uses. Works best in Chrome or Edge.
+            <strong>The agent always opens in English, then follows the customer.</strong> It
+            detects English, Hindi or Hinglish from what the person actually says and switches to
+            match them for the rest of the call — there is nothing to pick in advance. Browser demo
+            mode runs the identical pipeline for free using the Web Speech API (Chrome or Edge).
           </div>
         </div>
 
         <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.3fr)' }}>
           <div className="card">
             <div className="card-title">Call setup</div>
+
+            <div className="tabs" style={{ marginBottom: 16 }}>
+              <button
+                className={`tab ${phoneMode ? 'active' : ''}`}
+                onClick={() => setPhoneMode(true)}
+              >
+                Real phone call
+              </button>
+              <button
+                className={`tab ${!phoneMode ? 'active' : ''}`}
+                onClick={() => setPhoneMode(false)}
+              >
+                Browser demo
+              </button>
+            </div>
+
             <div className="stack" style={{ gap: 13 }}>
               <div>
                 <label>Customer name</label>
@@ -254,28 +270,6 @@ export default function DemoCall({ lastEvent, health }) {
                   placeholder={selected?.customer_name || 'Rahul'}
                 />
               </div>
-              <div>
-                <label>Language the customer speaks</label>
-                <select value={language} onChange={(event) => setLanguage(event.target.value)}>
-                  {LANGUAGES.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <label className="row" style={{ cursor: 'pointer', marginTop: 4 }}>
-                <input
-                  type="checkbox"
-                  checked={phoneMode}
-                  onChange={(event) => setPhoneMode(event.target.checked)}
-                  style={{ width: 15, height: 15 }}
-                />
-                <span style={{ fontSize: 13, color: 'var(--text)' }}>
-                  Place a real phone call ({health?.components?.telephony?.provider || 'mock'})
-                </span>
-              </label>
 
               {phoneMode && (
                 <>
@@ -287,12 +281,24 @@ export default function DemoCall({ lastEvent, health }) {
                       placeholder="+919812345678"
                     />
                   </div>
-                  {!health?.components?.telephony?.configured && (
-                    <div className="banner warn">
-                      <span>⚠️</span>
+                  {telephonyReady ? (
+                    <div className="banner">
+                      <span>&#9989;</span>
                       <div>
-                        Twilio isn’t configured, so this will run through the mock provider — no real
-                        call is placed. Add your Twilio credentials to <code>.env</code> to dial for real.
+                        Dialling for real via <strong>{telephony.provider}</strong> from{' '}
+                        <span className="mono">{telephony.from}</span>. On a Twilio trial the
+                        destination must be a verified caller ID.
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="banner warn">
+                      <span>&#9888;</span>
+                      <div>
+                        <strong>Real calling is unavailable.</strong>{' '}
+                        {health
+                          ? `Backend telephony is '${telephony.provider || 'mock'}'.`
+                          : 'The dashboard cannot reach the backend.'}{' '}
+                        The API refuses these requests rather than faking a call.
                       </div>
                     </div>
                   )}
@@ -302,7 +308,7 @@ export default function DemoCall({ lastEvent, health }) {
               <button
                 className="btn-primary"
                 onClick={startCall}
-                disabled={starting || (phoneMode && !phoneNumber)}
+                disabled={starting || (phoneMode && (!phoneNumber || !telephonyReady))}
                 style={{ justifyContent: 'center' }}
               >
                 {starting ? 'Starting…' : phoneMode ? '📞 Place call' : '🎙️ Start demo call'}
@@ -320,10 +326,7 @@ export default function DemoCall({ lastEvent, health }) {
                   onClick={() => {
                     const next = selected?.id === scenario.id ? null : scenario
                     setSelected(next)
-                    if (next) {
-                      setLanguage(next.language)
-                      setName(next.customer_name)
-                    }
+                    if (next) setName(next.customer_name)
                   }}
                 >
                   <div className="between">

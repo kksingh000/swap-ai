@@ -132,10 +132,19 @@ async def start_call(payload: StartCallRequest, db: Session = Depends(get_db)) -
     if blocked:
         raise HTTPException(status_code=403, detail=f"Cannot call this number: {reason}")
 
-    customer = customer_service.get_or_create(
-        db, payload.phone_number, payload.customer_name, payload.language
-    )
     telephony = get_telephony()
+    if not telephony.is_live:
+        # Never pretend. A "successful" mock response here reads as a placed
+        # call and silently wastes the operator's time.
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                f"Real calls need a live telephony provider, but '{telephony.name}' is active. "
+                "Set TELEPHONY_PROVIDER=twilio with valid credentials, or use demo mode."
+            ),
+        )
+
+    customer = customer_service.get_or_create(db, payload.phone_number, payload.customer_name)
     engine = _engine(db)
     call, opening = await engine.start_call(customer, mode="phone", provider=telephony.name)
 
@@ -167,10 +176,9 @@ async def start_demo_call(
     """Start a browser demo call. No telephony, no cost, full pipeline."""
     scenario = next((s for s in DEMO_SCENARIOS if s["id"] == payload.scenario), None)
     name = payload.customer_name or (scenario or {}).get("customer_name") or "Demo Customer"
-    language = payload.language or (scenario or {}).get("language") or "english"
     phone = payload.phone_number or customer_service.demo_phone()
 
-    customer = customer_service.get_or_create(db, phone, name, language)
+    customer = customer_service.get_or_create(db, phone, name)
     customer.do_not_call = False  # a demo run should never be blocked by an earlier demo
     db.commit()
 

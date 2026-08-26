@@ -17,7 +17,6 @@ class StartCallRequest(BaseModel):
     customer_name: Optional[str] = Field(default=None, max_length=120)
     phone_number: str = Field(min_length=6, max_length=24)
     campaign_type: str = "acquisition"
-    language: str = "english"
 
     @field_validator("phone_number")
     @classmethod
@@ -31,7 +30,6 @@ class StartCallRequest(BaseModel):
 class StartDemoCallRequest(BaseModel):
     customer_name: Optional[str] = None
     phone_number: Optional[str] = None
-    language: str = "english"
     scenario: Optional[str] = None
 
 
