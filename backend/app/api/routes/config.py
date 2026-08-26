@@ -152,6 +152,32 @@ async def twilio_check() -> Dict[str, Any]:
     except Exception as exc:  # noqa: BLE001
         result["number_check_error"] = str(exc)[:200]
 
+    # 3. WhatsApp sender configuration.
+    sandbox = "+14155238886"
+    wa_from = (settings.TWILIO_WHATSAPP_FROM or "").replace("whatsapp:", "")
+    whatsapp: Dict[str, Any] = {
+        "provider": settings.WHATSAPP_PROVIDER,
+        "from": settings.TWILIO_WHATSAPP_FROM or None,
+        "is_sandbox": wa_from == sandbox,
+    }
+    if settings.WHATSAPP_PROVIDER != "twilio":
+        whatsapp["note"] = (
+            "Messages are simulated in the dashboard. Set WHATSAPP_PROVIDER=twilio to send for real."
+        )
+    elif not wa_from:
+        whatsapp["problem"] = "WHATSAPP_PROVIDER=twilio but TWILIO_WHATSAPP_FROM is unset."
+        whatsapp["fix"] = f"Set TWILIO_WHATSAPP_FROM=whatsapp:{sandbox} to use the free sandbox."
+    elif whatsapp["is_sandbox"]:
+        whatsapp["note"] = (
+            "Using the free Twilio sandbox. Each recipient must first send the join code "
+            "to this number on WhatsApp, and the session expires after 72 hours of silence."
+        )
+    else:
+        whatsapp["note"] = (
+            "Using a non-sandbox sender - this must be an approved WhatsApp Business number."
+        )
+    result["whatsapp"] = whatsapp
+
     result["ok"] = True
     result["stage"] = "ready"
     if (account_type or "").lower() == "trial":
