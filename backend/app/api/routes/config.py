@@ -1,6 +1,7 @@
 """Runtime configuration: store profile, scoring weights, FAQ, provider switching."""
 from typing import Any, Dict
 
+import httpx
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -47,6 +48,119 @@ async def patch_store_config(
         "thresholds": config.thresholds,
         "faq": config.faq,
     }
+
+
+@router.get("/twilio-check")
+async def twilio_check() -> Dict[str, Any]:
+    """Validate the Twilio setup against Twilio itself.
+
+    Separates the three things that all surface as one failed call: bad
+    credentials, a from-number the account does not own, and a trial account
+    refusing an unverified destination.
+    """
+    from app.services.twilio_auth import (
+        twilio_auth,
+        twilio_configured,
+        twilio_credential_style,
+    )
+
+    style = twilio_credential_style()
+    result: Dict[str, Any] = {
+        "credential_style": style,
+        "account_sid_set": bool(settings.TWILIO_ACCOUNT_SID),
+        "account_sid_prefix": settings.TWILIO_ACCOUNT_SID[:6] or None,
+        "from_number": settings.TWILIO_PHONE_NUMBER or None,
+    }
+
+    if not twilio_configured():
+        result.update(
+            ok=False,
+            stage="credentials",
+            problem="Twilio credentials are incomplete.",
+            fix="Set TWILIO_ACCOUNT_SID plus either TWILIO_AUTH_TOKEN, or both "
+            "TWILIO_API_KEY_SID and TWILIO_API_KEY_SECRET.",
+        )
+        return result
+
+    auth = twilio_auth()
+    base = f"https://api.twilio.com/2010-04-01/Accounts/{settings.TWILIO_ACCOUNT_SID}"
+
+    # 1. Do the credentials authenticate at all?
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.get(f"{base}.json", auth=auth)
+    except Exception as exc:  # noqa: BLE001
+        result.update(ok=False, stage="network", problem=str(exc)[:200])
+        return result
+
+    if resp.status_code >= 400:
+        payload = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+        message = payload.get("message", resp.text[:200])
+        fix = (
+            "The API key secret is shown only once at creation - if it was not saved, "
+            "create a new Standard API key, or switch to TWILIO_AUTH_TOKEN which is "
+            "always visible in the Twilio console."
+            if style == "api_key"
+            else "Re-copy the Auth Token from the Twilio console dashboard."
+        )
+        result.update(
+            ok=False,
+            stage="authentication",
+            http_status=resp.status_code,
+            problem=message,
+            fix=fix,
+            note="Also confirm the credentials belong to this exact Account SID.",
+        )
+        return result
+
+    account = resp.json()
+    account_type = account.get("type")
+    result.update(
+        authenticated=True,
+        account_status=account.get("status"),
+        account_type=account_type,
+        account_name=account.get("friendly_name"),
+    )
+
+    # 2. Does this account actually own the from-number, with voice enabled?
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            numbers = await client.get(
+                f"{base}/IncomingPhoneNumbers.json", auth=auth, params={"PageSize": 50}
+            )
+        owned = [n for n in numbers.json().get("incoming_phone_numbers", [])]
+        match = next(
+            (n for n in owned if n.get("phone_number") == settings.TWILIO_PHONE_NUMBER), None
+        )
+        result["owned_numbers"] = [n.get("phone_number") for n in owned]
+        if match is None:
+            result.update(
+                ok=False,
+                stage="from_number",
+                problem=f"{settings.TWILIO_PHONE_NUMBER} is not a number on this account.",
+                fix="Set TWILIO_PHONE_NUMBER to one of owned_numbers.",
+            )
+            return result
+        if not match.get("capabilities", {}).get("voice"):
+            result.update(
+                ok=False,
+                stage="from_number",
+                problem="That number has no voice capability.",
+                fix="Buy a voice-capable number.",
+            )
+            return result
+    except Exception as exc:  # noqa: BLE001
+        result["number_check_error"] = str(exc)[:200]
+
+    result["ok"] = True
+    result["stage"] = "ready"
+    if (account_type or "").lower() == "trial":
+        result["trial_warning"] = (
+            "This is a TRIAL account: it can only dial numbers added under "
+            "Phone Numbers > Verified Caller IDs. Unverified destinations fail "
+            "with error 21219."
+        )
+    return result
 
 
 @router.get("/providers")
