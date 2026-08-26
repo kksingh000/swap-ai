@@ -66,6 +66,19 @@ export default function DemoCall({ events, health }) {
         ),
       )
     }
+    // Twilio reports the real outcome seconds later; update the bubble.
+    if (type === 'whatsapp.status') {
+      setWaMessages((current) =>
+        current.map((m) =>
+          m.message_id === data.message_id
+            ? { ...m, status: data.status, error: data.error }
+            : m,
+        ),
+      )
+      if (['failed', 'undelivered'].includes(data.status)) {
+        push(`WhatsApp ${data.status}: ${data.error || 'see logs'}`, 'warn')
+      }
+    }
     if (type === 'action.completed' || type === 'action.queued') {
       setActions((current) => {
         const rest = current.filter((a) => a.action_id !== data.action_id)

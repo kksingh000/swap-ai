@@ -67,10 +67,13 @@ class TwilioWhatsAppProvider(WhatsAppProvider):
                 resp = await client.post(self.base, data=data, auth=twilio_auth())
             payload = resp.json()
             if resp.status_code >= 400:
+                code = payload.get("code")
+                message = payload.get("message", resp.text[:200])
                 return {
                     "status": "failed",
                     "provider": self.name,
-                    "error": payload.get("message", resp.text[:200]),
+                    "error": f"[{code}] {message}" if code else message,
+                    "error_code": code,
                 }
             return {
                 "status": payload.get("status", "queued"),
@@ -81,9 +84,22 @@ class TwilioWhatsAppProvider(WhatsAppProvider):
             log.error("Twilio WhatsApp send failed: %s", exc)
             return {"status": "failed", "provider": self.name, "error": str(exc)[:200]}
 
+    def _status_callback(self) -> Dict[str, str]:
+        """Twilio's create response only says 'queued'. Delivery (or failure)
+        arrives later on this webhook, so 'sent' never has to be a guess."""
+        base = settings.PUBLIC_BASE_URL.rstrip("/")
+        if not base.startswith("https://"):
+            return {}  # Twilio will not call an http callback
+        return {"StatusCallback": f"{base}{settings.API_PREFIX}/whatsapp/status-callback"}
+
     async def send_message(self, to_number: str, body: str) -> Dict[str, Any]:
         return await self._post(
-            {"From": self._wa(self.from_number), "To": self._wa(to_number), "Body": body}
+            {
+                "From": self._wa(self.from_number),
+                "To": self._wa(to_number),
+                "Body": body,
+                **self._status_callback(),
+            }
         )
 
     async def send_media(
@@ -93,6 +109,7 @@ class TwilioWhatsAppProvider(WhatsAppProvider):
             "From": self._wa(self.from_number),
             "To": self._wa(to_number),
             "MediaUrl": media_url,
+            **self._status_callback(),
         }
         if caption:
             data["Body"] = caption

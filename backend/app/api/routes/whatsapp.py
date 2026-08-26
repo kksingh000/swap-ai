@@ -1,7 +1,7 @@
 """WhatsApp send + history. Uses the configured provider (mock by default)."""
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Form, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.events import bus
@@ -99,6 +99,60 @@ async def send_whatsapp(payload: WhatsAppSendRequest, db: Session = Depends(get_
         "provider": message.provider,
         "result": result,
     }
+
+
+# Twilio's WhatsApp failure codes, translated into what to actually do.
+WHATSAPP_ERROR_HINTS = {
+    "63016": "Free-form message outside the 24-hour window. The recipient must "
+             "message your WhatsApp sender first (for the sandbox, send the join code).",
+    "63015": "The recipient has not joined the WhatsApp sandbox.",
+    "63007": "The From number is not a valid WhatsApp sender for this account.",
+    "63003": "The recipient is not a reachable WhatsApp user.",
+    "21211": "The To number is not a valid phone number.",
+    "63024": "Invalid message: check the body and sender configuration.",
+}
+
+
+@router.post("/status-callback")
+async def whatsapp_status_callback(
+    MessageSid: str = Form(default=""),
+    MessageStatus: str = Form(default=""),
+    ErrorCode: str = Form(default=""),
+    ErrorMessage: str = Form(default=""),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Twilio reports the real outcome here: delivered, undelivered or failed.
+
+    The create-message response only ever says 'queued', so without this the
+    dashboard could only report that Twilio accepted the request - not that
+    anything actually arrived.
+    """
+    message = (
+        db.query(WhatsAppMessage)
+        .filter(WhatsAppMessage.provider_message_id == MessageSid)
+        .first()
+    )
+    if not message:
+        return {"ok": True, "note": "unknown message sid"}
+
+    message.status = MessageStatus or message.status
+    if ErrorCode:
+        hint = WHATSAPP_ERROR_HINTS.get(str(ErrorCode), "")
+        message.error = f"[{ErrorCode}] {ErrorMessage or ''} {hint}".strip()
+    db.commit()
+
+    await bus.broadcast(
+        "whatsapp.status",
+        {
+            "message_id": message.id,
+            "provider_message_id": MessageSid,
+            "status": message.status,
+            "error": message.error,
+            "to": message.to_number,
+        },
+        call_id=message.call_id,
+    )
+    return {"ok": True}
 
 
 @router.get("/messages")

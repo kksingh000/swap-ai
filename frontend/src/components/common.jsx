@@ -136,6 +136,20 @@ export function ActionFeed({ actions = [] }) {
   )
 }
 
+const FAILED_WA_STATUS = new Set(['failed', 'undelivered'])
+
+// Twilio's create response says "queued" - that is acceptance, not delivery.
+// Showing a permanent double tick made a rejected message look delivered.
+function waStatusLabel(message) {
+  if (message.simulated) return '✓✓ simulated'
+  const status = message.status || 'queued'
+  if (FAILED_WA_STATUS.has(status)) return `✗ ${status}`
+  if (status === 'delivered') return '✓✓ delivered'
+  if (status === 'read') return '✓✓ read'
+  if (status === 'sent') return '✓ sent'
+  return `◷ ${status}`
+}
+
 export function WhatsAppSimulator({ messages = [], customerName = 'Customer' }) {
   return (
     <div className="wa-phone">
@@ -155,10 +169,23 @@ export function WhatsAppSimulator({ messages = [], customerName = 'Customer' }) 
           </div>
         ) : (
           messages.map((message, index) => (
-            <div className="wa-msg" key={message.message_id || message.id || index}>
+            <div
+              className="wa-msg"
+              key={message.message_id || message.id || index}
+              style={
+                FAILED_WA_STATUS.has(message.status)
+                  ? { background: '#5c1f1f', border: '1px solid rgba(239,68,68,0.5)' }
+                  : undefined
+              }
+            >
               {message.body}
+              {FAILED_WA_STATUS.has(message.status) && message.error && (
+                <div style={{ marginTop: 8, fontSize: 11.5, color: '#fca5a5' }}>
+                  ⚠ {message.error}
+                </div>
+              )}
               <div className="wa-time">
-                {message.simulated === false ? '✓✓ sent' : '✓✓ simulated'} ·{' '}
+                {waStatusLabel(message)} ·{' '}
                 {new Date(message.at || Date.now()).toLocaleTimeString([], {
                   hour: '2-digit',
                   minute: '2-digit',
