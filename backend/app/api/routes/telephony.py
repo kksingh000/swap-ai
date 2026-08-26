@@ -10,6 +10,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Form, Query, Request, Response
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.events import bus
 from app.core.logging import get_logger
 from app.db.session import get_db
@@ -24,8 +25,17 @@ router = APIRouter(prefix="/telephony", tags=["telephony"])
 XML = "application/xml"
 
 
-def _action_url(request: Request, call_id: int) -> str:
-    return str(request.url.replace(query=f"call_id={call_id}"))
+def _action_url(call_id: int) -> str:
+    """Absolute https webhook URL for the next turn.
+
+    Built from PUBLIC_BASE_URL rather than request.url: behind a TLS-
+    terminating proxy the request scheme reads as http, and Twilio POSTing to
+    http would hit a 301 that silently breaks the conversation.
+    """
+    return (
+        f"{settings.PUBLIC_BASE_URL.rstrip('/')}"
+        f"{settings.API_PREFIX}/telephony/twilio/voice?call_id={call_id}"
+    )
 
 
 def _find_call(db: Session, call_id: Optional[int], call_sid: Optional[str]) -> Optional[Call]:
@@ -70,7 +80,7 @@ async def twilio_voice(
             customer, mode="phone", provider="twilio", provider_call_sid=CallSid
         )
         return Response(
-            content=twiml_say_and_gather(opening, _action_url(request, call.id), customer.preferred_language),
+            content=twiml_say_and_gather(opening, _action_url(call.id), customer.preferred_language),
             media_type=XML,
         )
 
@@ -86,7 +96,7 @@ async def twilio_voice(
         last_agent = [m for m in call.messages if m.role == "agent"]
         opening = last_agent[-1].content if last_agent else engine.responder.opening(customer.name)
         return Response(
-            content=twiml_say_and_gather(opening, _action_url(request, call.id), customer.preferred_language),
+            content=twiml_say_and_gather(opening, _action_url(call.id), customer.preferred_language),
             media_type=XML,
         )
 
@@ -98,7 +108,7 @@ async def twilio_voice(
             return Response(content=twiml_say_and_hangup(reply, customer.preferred_language), media_type=XML)
         nudge = "Sorry, I didn't catch that. Are you there?"
         return Response(
-            content=twiml_say_and_gather(nudge, _action_url(request, call.id), customer.preferred_language),
+            content=twiml_say_and_gather(nudge, _action_url(call.id), customer.preferred_language),
             media_type=XML,
         )
 
@@ -114,7 +124,7 @@ async def twilio_voice(
     if result["should_end"]:
         return Response(content=twiml_say_and_hangup(result["reply"], language), media_type=XML)
     return Response(
-        content=twiml_say_and_gather(result["reply"], _action_url(request, call.id), language),
+        content=twiml_say_and_gather(result["reply"], _action_url(call.id), language),
         media_type=XML,
     )
 

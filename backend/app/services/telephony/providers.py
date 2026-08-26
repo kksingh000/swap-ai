@@ -147,13 +147,16 @@ def twiml_say_and_gather(
 ) -> str:
     """Speak a line, then listen for the customer's reply via Twilio's own STT."""
     stt_lang, voice = LANG_TO_TWILIO.get(language, LANG_TO_TWILIO["english"])
+    # action_url usually already carries ?call_id=N, so pick the right separator.
+    separator = "&" if "?" in action_url else "?"
+    no_input_url = f"{action_url}{separator}no_input=1"
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Gather input="speech" action="{escape(action_url)}" method="POST" language="{stt_lang}"
           speechTimeout="auto" timeout="{timeout}" enhanced="true" speechModel="phone_call">
     <Say voice="{voice}" language="{stt_lang}">{escape(text)}</Say>
   </Gather>
-  <Redirect method="POST">{escape(action_url)}?no_input=1</Redirect>
+  <Redirect method="POST">{escape(no_input_url)}</Redirect>
 </Response>"""
 
 

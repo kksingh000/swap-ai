@@ -27,7 +27,7 @@ services:
       - key: DATABASE_URL
         value: sqlite:///./swap_agent.db
       - key: CORS_ORIGINS
-        value: https://swap-ai.vercel.app,http://localhost:5173
+        value: https://swap-ai-tau.vercel.app,http://localhost:5173
       - key: PUBLIC_BASE_URL
         value: https://swap-ai-backend.onrender.com
       - key: LLM_PROVIDER
