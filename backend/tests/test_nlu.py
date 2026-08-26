@@ -1,4 +1,6 @@
 """NLU tests: the money/intent/language layer that everything else depends on."""
+import re
+
 import pytest
 
 from app.schemas.nlu import CustomerMemory
@@ -131,3 +133,50 @@ def test_products_and_budget_extract_from_indic_scripts(text):
     turn = extract_turn(text)
     assert "jacket" in turn.product_categories
     assert turn.budget.amount == 2000
+
+
+@pytest.mark.parametrize(
+    "text,expected_intent",
+    [
+        ("నాకు జాకెట్ కావాలి", "buy_thrift_clothes"),
+        ("collection WhatsApp కి పంపండి", "request_catalog"),
+        ("నాకు వద్దు, అవసరం లేదు", "not_interested"),
+        ("మళ్ళీ కాల్ చేయవద్దు", "do_not_call"),
+        ("ನನಗೆ ಜಾಕೆಟ್ ಬೇಕು", "buy_thrift_clothes"),
+        ("collection WhatsApp ಗೆ ಕಳಿಸಿ", "request_catalog"),
+        ("ನನಗೆ ಬೇಡ, ಅಗತ್ಯವಿಲ್ಲ", "not_interested"),
+        ("ನಾಳೆ ಕರೆ ಮಾಡಿ", "request_callback"),
+    ],
+)
+def test_telugu_kannada_intents(text, expected_intent):
+    assert extract_turn(text).intent == expected_intent
+
+
+@pytest.mark.parametrize(
+    "text,barrier",
+    [
+        ("బట్టలు శుభ్రంగా ఉంటాయా?", "hygiene_concern"),
+        ("ఇది నిజమేనా?", "trust_concern"),
+        ("ಬಟ್ಟೆ ಶುಚಿಯಾಗಿ ಇರುತ್ತದೆಯೇ?", "hygiene_concern"),
+        ("ಇದು ನಿಜವೇ?", "trust_concern"),
+        ("ತುಂಬಾ ಹೆಚ್ಚು ಆಯ್ತು", "budget_concern"),
+    ],
+)
+def test_telugu_kannada_objections(text, barrier):
+    assert barrier in extract_turn(text).barriers
+
+
+def test_agent_answers_in_the_customers_language():
+    """A Telugu or Kannada customer must not be answered in English."""
+    from app.services.conversation.responder import TemplateResponder
+    from app.core.store_profile import DEFAULT_STORE_PROFILE
+
+    responder = TemplateResponder(DEFAULT_STORE_PROFILE)
+    for text, script in [
+        ("నాకు జాకెట్ కావాలి, బడ్జెట్ 2000", "ఀ-౿"),   # Telugu block
+        ("ನನಗೆ ಜಾಕೆಟ್ ಬೇಕು, ಬಜೆಟ್ 2000", "ಀ-೿"),      # Kannada block
+    ]:
+        turn = extract_turn(text)
+        memory = CustomerMemory().merge_turn(turn)
+        reply = responder.reply(memory, turn, "qualification")
+        assert re.search(f"[{script}]", reply), f"replied without native script: {reply}"

@@ -29,6 +29,16 @@ PART_OF_DAY = {
     "night": (20, 0),
     "raat": (20, 0),
     "रात": (20, 0),
+    # Telugu
+    "ఉదయం": (10, 0),
+    "మధ్యాహ్నం": (15, 0),
+    "సాయంత్రం": (18, 30),
+    "రాత్రి": (20, 0),
+    # Kannada
+    "ಬೆಳಿಗ್ಗೆ": (10, 0),
+    "ಮಧ್ಯಾಹ್ನ": (15, 0),
+    "ಸಂಜೆ": (18, 30),
+    "ರಾತ್ರಿ": (20, 0),
 }
 
 WEEKDAYS = {
@@ -79,7 +89,13 @@ def parse_callback_time(text: str, now: Optional[datetime] = None) -> Dict[str, 
     day_label = ""
     confidence = 0.6
 
-    if re.search(r"\b(parso|day after tomorrow|परसों)\b", low):
+    if re.search(r"(ఎల్లుండి|ನಾಡಿದ್ದು)", low):
+        day_offset, day_label, confidence = 2, "day after tomorrow", 0.9
+    elif re.search(r"(రేపు|ನಾಳೆ)", low):
+        day_offset, day_label, confidence = 1, "tomorrow", 0.9
+    elif re.search(r"(ఈరోజు|ఇప్పుడే|ಇವತ್ತು|ಈಗಲೇ)", low):
+        day_offset, day_label, confidence = 0, "today", 0.9
+    elif re.search(r"\b(parso|day after tomorrow|परसों)\b", low):
         day_offset, day_label, confidence = 2, "day after tomorrow", 0.9
     elif re.search(r"\b(tomorrow|kal|कल)\b", low):
         day_offset, day_label, confidence = 1, "tomorrow", 0.9

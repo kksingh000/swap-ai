@@ -71,6 +71,9 @@ DNC_PATTERNS = [
     "remove my number", "remove me", "unsubscribe", "take me off",
     "call mat", "mat call", "phone mat", "dobara mat", "dubara mat",
     "band karo", "band kar", "pareshan mat", "मत करो", "फोन मत",
+    # Telugu / Kannada opt-out
+    "కాల్ చేయవద్దు", "కాల్ చేయకండి", "మళ్ళీ కాల్", "నంబర్ తీసేయండి",
+    "ಕರೆ ಮಾಡಬೇಡಿ", "ಮತ್ತೆ ಕರೆ", "ನಂಬರ್ ತೆಗೆಯಿರಿ",
 ]
 
 NOT_INTERESTED = [
@@ -80,6 +83,9 @@ NOT_INTERESTED = [
     "not looking for", "nothing right now", "nothing at the moment", "im good",
     "i'm good", "leave it", "rehne do", "chhodo",
     "नहीं चाहिए", "रुचि नहीं",
+    # Telugu / Kannada refusals
+    "వద్దు", "అవసరం లేదు", "ఆసక్తి లేదు",
+    "ಬೇಡ", "ಅಗತ್ಯವಿಲ್ಲ", "ಆಸಕ್ತಿ ಇಲ್ಲ",
 ]
 
 JUST_BROWSING = [
@@ -94,12 +100,17 @@ BUY_PATTERNS = [
     "do you have", "you have", "anything under", "what options", "options under",
     "kya milega", "mil jayega", "chahiye", "chaiye", "lena hai",
     "lenge", "kharid", "buy", "purchase", "order", "shopping", "खरीद", "चाहिए",
+    # Telugu / Kannada buying intent
+    "కావాలి", "కొనాలి", "కావాల", "ఉన్నాయా",
+    "ಬೇಕು", "ಖರೀದಿಸ", "ಇದೆಯಾ", "ಇವೆಯಾ",
 ]
 
 SELL_PATTERNS = [
     "want to sell", "sell my", "selling", "i have clothes", "bech", "bechna",
     "sell kar", "paise mil", "how much will you pay", "kitna doge", "kitne ka",
     "quote", "pickup my", "बेच",
+    "అమ్మాలి", "అమ్మ", "ఎంత ఇస్తారు",
+    "ಮಾರಬೇಕು", "ಮಾರಾಟ", "ಎಷ್ಟು ಕೊಡುತ್ತೀರಿ",
 ]
 
 SWAP_PATTERNS = [
@@ -115,6 +126,9 @@ CATALOG_PATTERNS = [
     "collection", "link", "photos", "pictures", "pics", "images", "list",
     "bhej do", "bhej dena", "bhejo", "bhej dijiye", "send kar", "share kar",
     "dikha do", "dikhao", "भेज", "दिखा",
+    # Telugu / Kannada "send it" / "show me"
+    "పంపండి", "పంపు", "చూపించండి", "పంపించండి",
+    "ಕಳಿಸಿ", "ತೋರಿಸಿ", "ಕಳುಹಿಸಿ",
 ]
 
 VISIT_PATTERNS = [
@@ -127,13 +141,19 @@ CALLBACK_PATTERNS = [
     "call me", "call back", "callback", "ring me", "phone me", "call kar",
     "call karna", "baad me call", "phir call", "kal call", "call kijiye",
     "बाद में", "कॉल कर",
+    "కాల్ చేయండి", "తర్వాత కాల్", "రేపు కాల్",
+    "ಕರೆ ಮಾಡಿ", "ನಂತರ ಕರೆ", "ನಾಳೆ ಕರೆ",
 ]
 
 URGENT_PATTERNS = {
-    "today": ["today", "right now", "immediately", "asap", "abhi", "aaj", "turant", "आज", "अभी"],
+    "today": [
+        "today", "right now", "immediately", "asap", "abhi", "aaj", "turant", "आज", "अभी",
+        "ఈరోజు", "ఇప్పుడే", "ಇವತ್ತು", "ಈಗಲೇ",
+    ],
     "this_week": [
         "this week", "few days", "couple of days", "by friday", "by sunday",
         "weekend", "is hafte", "hafte", "jaldi", "is week", "इस हफ्ते",
+        "ఈ వారం", "ఈ వారంలో", "ಈ ವಾರ", "ಈ ವಾರದಲ್ಲಿ",
     ],
     "this_month": ["this month", "few weeks", "is mahine", "mahine", "इस महीने"],
     "later": [
@@ -146,14 +166,20 @@ BARRIER_PATTERNS = {
     "budget_concern": [
         "too expensive", "costly", "mehnga", "mehanga", "budget nahi", "no budget",
         "tight budget", "cheaper", "sasta", "kam paise", "महंगा",
+        "ఖరీదు", "చాలా ఎక్కువ", "తక్కువ ధర",
+        "ದುಬಾರಿ", "ತುಂಬಾ ಹೆಚ್ಚು", "ಕಡಿಮೆ ಬೆಲೆ",
     ],
     "trust_concern": [
         "is this genuine", "genuine hai", "scam", "fraud", "fake", "real hai",
         "trust", "bharosa", "sach me", "asli", "verify", "धोखा", "असली",
+        "నమ్మకం", "నిజమేనా", "నిజంగా", "మోసం",
+        "ನಂಬಿಕೆ", "ನಿಜವೇ", "ನಿಜವಾಗಿ", "ಮೋಸ",
     ],
     "hygiene_concern": [
         "clean", "hygiene", "hygienic", "washed", "smell", "dirty", "used clothes",
         "someone else", "saaf", "ganda", "gande", "dhula", "सफाई", "गंदा",
+        "శుభ్రం", "శుభ్రంగా", "వాసన", "మురికి",
+        "ಶುಚಿ", "ಸ್ವಚ್ಛ", "ವಾಸನೆ", "ಕೊಳೆ",
     ],
     "needs_permission": [
         "ask my", "check with", "my wife", "my husband", "my mom", "my mother",
@@ -168,7 +194,10 @@ BARRIER_PATTERNS = {
         "see first", "show me first", "what do you have", "dekhna hoga",
         "pehle dekh", "inventory", "stock", "photos dekh",
     ],
-    "return_concern": ["return", "refund", "exchange policy", "wapas", "वापस"],
+    "return_concern": [
+        "return", "refund", "exchange policy", "wapas", "वापस",
+        "వాపసు", "తిరిగి ఇవ్వ", "ವಾಪಸ್", "ಹಿಂತಿರುಗಿಸ",
+    ],
 }
 
 QUESTION_MARKERS = [

@@ -268,6 +268,29 @@ BARRIER_REPLIES = {
 }
 
 
+def _install_indic_banks() -> None:
+    """Merge the Telugu and Kannada banks into the dictionaries above.
+
+    They live in their own module so this file stays readable rather than
+    carrying five languages inline for every single prompt.
+    """
+    from app.services.conversation.responder_indic import BANKS
+
+    for language, banks in BANKS.items():
+        for name, value in banks.items():
+            target = globals().get(name)
+            if not isinstance(target, dict):
+                continue
+            if name == "BARRIER_REPLIES":
+                for barrier, lines in value.items():
+                    target.setdefault(barrier, {})[language] = lines
+            else:
+                target[language] = value
+
+
+_install_indic_banks()
+
+
 class TemplateResponder:
     """Generates the agent's next line without any model."""
 
