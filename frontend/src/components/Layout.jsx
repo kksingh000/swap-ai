@@ -1,5 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 
+import { apiBaseUrl } from '../services/api'
+
 const NAV = [
   { to: '/', label: 'Dashboard', icon: '📊', end: true },
   { to: '/demo', label: 'Live Call', icon: '🎙️' },
@@ -20,7 +22,7 @@ const TITLES = {
   '/settings': 'Settings',
 }
 
-export default function Layout({ children, connected, health }) {
+export default function Layout({ children, connected, health, healthError }) {
   const { pathname } = useLocation()
   const title = TITLES[pathname] || (pathname.startsWith('/leads/') ? 'Lead Detail' : 'SwapCircle')
 
@@ -66,11 +68,37 @@ export default function Layout({ children, connected, health }) {
         <header className="topbar">
           <div className="page-title">{title}</div>
           <div className="row">
-            <span className="chip">{health?.components?.telephony?.provider || 'mock'} telephony</span>
-            <span className="chip">{health?.components?.whatsapp?.provider || 'mock'} whatsapp</span>
+            {health ? (
+              <>
+                <span className="chip">{health.components?.telephony?.provider} telephony</span>
+                <span className="chip">{health.components?.whatsapp?.provider} whatsapp</span>
+              </>
+            ) : (
+              <span className="chip" style={{ color: 'var(--danger)' }}>backend unreachable</span>
+            )}
           </div>
         </header>
-        <div className="page-body">{children}</div>
+        <div className="page-body">
+          {healthError && (
+            <div className="banner warn" style={{ marginBottom: 18 }}>
+              <span>&#9888;</span>
+              <div>
+                <strong>Can&rsquo;t reach the backend.</strong> Every provider below will read as
+                mock and no call can be placed.
+                <div className="mono" style={{ marginTop: 6 }}>
+                  API: {apiBaseUrl()}
+                </div>
+                <div className="mono">Error: {healthError}</div>
+                <div style={{ marginTop: 6 }}>
+                  Usual causes: <code>VITE_API_BASE</code> not set at build time (the URL above
+                  would point at this site instead of the API), or the API&rsquo;s
+                  <code> CORS_ORIGINS</code> not listing <code>{window.location.origin}</code>.
+                </div>
+              </div>
+            </div>
+          )}
+          {children}
+        </div>
       </div>
     </div>
   )

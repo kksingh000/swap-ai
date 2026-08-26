@@ -16,6 +16,7 @@ import Training from './pages/Training'
 
 export default function App() {
   const [health, setHealth] = useState(null)
+  const [healthError, setHealthError] = useState(null)
   const [lastEvent, setLastEvent] = useState(null)
 
   // One socket for the whole app; pages subscribe by reading `lastEvent`.
@@ -23,11 +24,22 @@ export default function App() {
   const { connected } = useWebSocket(handleEvent)
 
   useEffect(() => {
-    api.health().then(setHealth).catch(() => setHealth(null))
+    api
+      .health()
+      .then((result) => {
+        setHealth(result)
+        setHealthError(null)
+      })
+      // Surface this instead of silently rendering defaults - a swallowed
+      // error here looks exactly like "everything is in mock mode".
+      .catch((error) => {
+        setHealth(null)
+        setHealthError(error.message || 'Could not reach the backend')
+      })
   }, [])
 
   return (
-    <Layout connected={connected} health={health}>
+    <Layout connected={connected} health={health} healthError={healthError}>
       <Routes>
         <Route path="/" element={<Dashboard lastEvent={lastEvent} />} />
         <Route path="/demo" element={<DemoCall lastEvent={lastEvent} health={health} />} />

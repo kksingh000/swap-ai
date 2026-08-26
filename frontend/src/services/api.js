@@ -2,6 +2,15 @@
 
 const BASE = import.meta.env.VITE_API_BASE || '/api'
 
+/** Absolute URL of the API, for diagnostics in the UI. */
+export function apiBaseUrl() {
+  try {
+    return new URL(BASE, window.location.origin).toString().replace(/\/$/, '')
+  } catch {
+    return BASE
+  }
+}
+
 async function request(path, options = {}) {
   const response = await fetch(`${BASE}${path}`, {
     headers: { 'Content-Type': 'application/json' },
