@@ -135,10 +135,22 @@ class TwilioProvider(TelephonyProvider):
 # TwiML helpers
 # ---------------------------------------------------------------------------
 
+# (speech-recognition locale, TTS voice). Twilio recognises all of these
+# locales; Google voices cover the languages Amazon Polly does not.
 LANG_TO_TWILIO = {
     "english": ("en-IN", settings.TWILIO_VOICE),
+    # en-IN handles code-switched Hinglish far better than hi-IN does.
     "hinglish": ("en-IN", settings.TWILIO_VOICE),
     "hindi": ("hi-IN", "Polly.Aditi"),
+    "marathi": ("mr-IN", "Google.mr-IN-Standard-A"),
+    "bengali": ("bn-IN", "Google.bn-IN-Standard-A"),
+    "telugu": ("te-IN", "Google.te-IN-Standard-A"),
+    "kannada": ("kn-IN", "Google.kn-IN-Standard-A"),
+    "tamil": ("ta-IN", "Google.ta-IN-Standard-A"),
+    "gujarati": ("gu-IN", "Google.gu-IN-Standard-A"),
+    "punjabi": ("pa-IN", "Google.pa-IN-Standard-A"),
+    "malayalam": ("ml-IN", "Google.ml-IN-Standard-A"),
+    "odia": ("en-IN", settings.TWILIO_VOICE),  # no Twilio voice for Odia yet
 }
 
 

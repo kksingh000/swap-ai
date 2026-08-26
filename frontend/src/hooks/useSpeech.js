@@ -12,6 +12,15 @@ const LANG_CODES = {
   english: 'en-IN',
   hinglish: 'en-IN', // en-IN handles code-switched Hinglish far better than hi-IN
   hindi: 'hi-IN',
+  marathi: 'mr-IN',
+  bengali: 'bn-IN',
+  telugu: 'te-IN',
+  kannada: 'kn-IN',
+  tamil: 'ta-IN',
+  gujarati: 'gu-IN',
+  punjabi: 'pa-IN',
+  malayalam: 'ml-IN',
+  odia: 'or-IN',
 }
 
 export function useSpeechRecognition({ language = 'english', onResult, onError } = {}) {

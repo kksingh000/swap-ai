@@ -31,7 +31,15 @@ def build_system_prompt(profile: Dict[str, Any], memory: CustomerMemory, stage: 
         "hindi": "Reply in natural spoken Hindi written in Roman script (the way people actually text), unless the customer used Devanagari, then use Devanagari.",
         "hinglish": "Reply in natural Hinglish, mixing Hindi and English exactly the way young Delhi customers speak. Do not translate to pure Hindi or pure English.",
         "english": "Reply in simple Indian English.",
-    }[memory.language if memory.language in ("hindi", "hinglish", "english") else "english"]
+    }.get(
+        memory.language,
+        # Any other detected Indian language: mirror it in its own script,
+        # keeping product and brand names in English the way people speak.
+        f"Reply in natural conversational {memory.language.title()}, written in that "
+        f"language's own script. Keep brand names, sizes and English loanwords as "
+        f"people actually say them. Do not switch to Hindi or English unless the "
+        f"customer does.",
+    )
 
     return f"""You are {agent}, a friendly young sales representative for {store}, a thrift and clothing-swap store in {profile.get('location', 'Delhi NCR')}.
 

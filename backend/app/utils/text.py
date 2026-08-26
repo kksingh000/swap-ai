@@ -5,6 +5,28 @@ from typing import List
 
 DEVANAGARI = re.compile(r"[ऀ-ॿ]")
 
+# Each major Indian script has its own Unicode block, so the script alone
+# identifies the language - except Devanagari, which Hindi and Marathi share.
+INDIC_SCRIPTS = [
+    ("bengali", re.compile(r"[ঀ-৿]")),
+    ("punjabi", re.compile(r"[਀-੿]")),
+    ("gujarati", re.compile(r"[઀-૿]")),
+    ("odia", re.compile(r"[଀-୿]")),
+    ("tamil", re.compile(r"[஀-௿]")),
+    ("telugu", re.compile(r"[ఀ-౿]")),
+    ("kannada", re.compile(r"[ಀ-೿]")),
+    ("malayalam", re.compile(r"[ഀ-ൿ]")),
+]
+
+# Hindi and Marathi are both written in Devanagari, so the script cannot
+# separate them - these are words that only really appear in Marathi.
+MARATHI_MARKERS = {
+    "आहे", "आहेत", "मला", "तुम्ही", "तुला", "पाहिजे", "नको", "काय", "कसं",
+    "कशी", "कुठे", "छान", "बरं", "होय", "करा", "मी", "आम्ही", "किंवा", "पण",
+    "aahe", "ahe", "mala", "tumhi", "pahije", "nako", "kasa", "kase", "kay",
+    "barr", "khup", "aamhi", "tula",
+}
+
 # Romanised Hindi markers that show up constantly in Indian phone conversations.
 HINGLISH_MARKERS = {
     "hai", "hain", "haan", "han", "nahi", "nai", "nahin", "kya", "kyu", "kyun",
@@ -36,16 +58,28 @@ def tokens(text: str) -> List[str]:
 
 
 def detect_language(text: str) -> str:
-    """Return english | hindi | hinglish.
+    """Identify the language of one utterance.
 
-    Devanagari script wins outright. Otherwise we look at how many romanised
-    Hindi markers appear relative to the sentence length.
+    Returns english | hindi | hinglish | marathi | bengali | telugu | kannada |
+    tamil | gujarati | punjabi | malayalam | odia.
+
+    Script detection is reliable for the non-Devanagari languages. Romanised
+    input (someone typing Telugu in Latin letters) is NOT detected - it falls
+    through to english/hinglish, which is a known limitation.
     """
     text = normalize(text)
     if not text:
         return "english"
 
+    # A distinct script is decisive.
+    for language, pattern in INDIC_SCRIPTS:
+        if pattern.search(text):
+            return language
+
     devanagari_chars = len(DEVANAGARI.findall(text))
+    if devanagari_chars:
+        if any(marker in text for marker in MARATHI_MARKERS):
+            return "marathi"
     latin_chars = len(re.findall(r"[A-Za-z]", text))
 
     if devanagari_chars and devanagari_chars >= latin_chars:
@@ -56,6 +90,10 @@ def detect_language(text: str) -> str:
     toks = tokens(text)
     if not toks:
         return "english"
+
+    if sum(1 for t in toks if t in MARATHI_MARKERS) >= 2:
+        return "marathi"
+
     hits = sum(1 for t in toks if t in HINGLISH_MARKERS)
     if hits == 0:
         return "english"

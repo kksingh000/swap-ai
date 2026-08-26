@@ -26,7 +26,13 @@ INTENTS = [
 ]
 
 TIMELINES = ["today", "this_week", "this_month", "later", "exploring", "unknown"]
-LANGUAGES = ["english", "hindi", "hinglish"]
+LANGUAGES = [
+    "english", "hindi", "hinglish",
+    # Detected by script. Conversation quality in these depends on an LLM
+    # being configured; the deterministic templates only cover the first three.
+    "marathi", "bengali", "telugu", "kannada", "tamil",
+    "gujarati", "punjabi", "malayalam", "odia",
+]
 SENTIMENTS = ["positive", "neutral", "negative"]
 
 

@@ -17,13 +17,18 @@ from app.utils.text import detect_language, normalize
 # --------------------------------------------------------------------------
 
 CATEGORY_PATTERNS: Dict[str, List[str]] = {
-    "jacket": ["jacket", "jackets", "jaket", "जैकेट"],
+    "jacket": ["jacket", "jackets", "jaket", "जैकेट", "जॅकेट",
+               "జాకెట్", "ಜಾಕೆಟ್", "জ্যাকেট"],
     "hoodie": ["hoodie", "hoodies", "sweatshirt", "हूडी"],
-    "jeans": ["jeans", "denim", "jean", "जींस"],
-    "shirt": ["shirt", "shirts", "formal shirt", "शर्ट"],
-    "tshirt": ["t-shirt", "tshirt", "t shirt", "tee", "tees", "टीशर्ट"],
+    "jeans": ["jeans", "denim", "jean", "जींस", "जीन्स",
+              "జీన్స్", "ಜೀನ್ಸ್", "জিন্স"],
+    "shirt": ["shirt", "shirts", "formal shirt", "शर्ट",
+              "షర్ట్", "ಶರ್ಟ್", "শার্ট"],
+    "tshirt": ["t-shirt", "tshirt", "t shirt", "tee", "tees", "टीशर्ट",
+               "టీషర్ట్", "ಟೀಶರ್ಟ್", "টি-শার্ট"],
     "kurta": ["kurta", "kurti", "kurtas", "kurtis", "कुर्ता", "कुर्ती"],
-    "saree": ["saree", "sari", "sarees", "साड़ी"],
+    "saree": ["saree", "sari", "sarees", "साड़ी", "साडी",
+              "చీర", "ಸೀರೆ", "শাড়ি"],
     "dress": ["dress", "dresses", "gown", "frock", "ड्रेस"],
     "top": ["top", "tops", "crop top", "टॉप"],
     "trousers": ["trouser", "trousers", "pants", "chinos", "cargo"],

@@ -91,3 +91,43 @@ def test_memory_merge_is_additive():
     assert memory.budget == 1500
     assert set(memory.clothing_categories) >= {"jacket", "hoodie"}
     assert memory.timeline == "this_week"
+
+
+# --------------------------------------------------------------------------
+# Other Indian languages
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("నాకు జాకెట్ కావాలి", "telugu"),
+        ("ನನಗೆ ಜಾಕೆಟ್ ಬೇಕು", "kannada"),
+        ("আমার জ্যাকেট দরকার", "bengali"),
+        ("எனக்கு ஜாக்கெட் வேண்டும்", "tamil"),
+        ("મને જેકેટ જોઈએ છે", "gujarati"),
+    ],
+)
+def test_indic_scripts_are_identified(text, expected):
+    assert detect_language(text) == expected
+
+
+def test_marathi_is_not_mistaken_for_hindi():
+    """Both use Devanagari, so the script alone cannot separate them."""
+    assert detect_language("मला जॅकेट हवे आहे") == "marathi"
+    assert detect_language("मुझे जैकेट चाहिए") == "hindi"
+    assert detect_language("mala jacket pahije aahe") == "marathi"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "నాకు జాకెట్ కావాలి, బడ్జెట్ 2000",
+        "ನನಗೆ ಜಾಕೆಟ್ ಬೇಕು, ಬಜೆಟ್ 2000",
+        "আমার জ্যাকেট দরকার, বাজেট 2000",
+        "मला जॅकेट हवे आहे, बजेट 2000",
+    ],
+)
+def test_products_and_budget_extract_from_indic_scripts(text):
+    turn = extract_turn(text)
+    assert "jacket" in turn.product_categories
+    assert turn.budget.amount == 2000
