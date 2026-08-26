@@ -8,10 +8,11 @@ import {
   WhatsAppSimulator,
   useToasts,
 } from '../components/common'
+import { useEventStream } from '../hooks/useEventStream'
 import { useSpeechRecognition, useSpeechSynthesis } from '../hooks/useSpeech'
 import { api } from '../services/api'
 
-export default function DemoCall({ lastEvent, health }) {
+export default function DemoCall({ events, health }) {
   const [scenarios, setScenarios] = useState([])
   const [selected, setSelected] = useState(null)
   const [name, setName] = useState('')
@@ -48,10 +49,10 @@ export default function DemoCall({ lastEvent, health }) {
   }, [messages, thinking])
 
   // --- live events (background actions land here, not in the HTTP response) --
-  useEffect(() => {
-    if (!lastEvent || !callRef.current) return
-    if (lastEvent.call_id && lastEvent.call_id !== callRef.current.call_id) return
-    const { type, data } = lastEvent
+  useEventStream(events, (event) => {
+    if (!callRef.current) return
+    if (event.call_id && event.call_id !== callRef.current.call_id) return
+    const { type, data } = event
 
     if (type === 'whatsapp.sent') {
       setWaMessages((current) => [...current, { ...data, at: Date.now() }])
@@ -74,6 +75,17 @@ export default function DemoCall({ lastEvent, health }) {
     if (type === 'callback.due') {
       push(`⏰ Callback due: ${data.customer_name || data.phone_number}`, 'warn')
     }
+    // A phone call has no HTTP turn response in this tab, so the live
+    // intelligence panels have to be driven entirely by these events.
+    if (type === 'lead.updated' && callRef.current.mode === 'phone') {
+      setLead({
+        score: data.score,
+        classification: data.classification,
+        reasons: data.reasons || [],
+      })
+      if (data.memory) setMemory(data.memory)
+      if (data.extracted) setExtracted(data.extracted)
+    }
     // Phone-mode calls are driven by Twilio, so the transcript arrives over WS.
     if ((type === 'message.agent' || type === 'message.customer') && callRef.current.mode === 'phone') {
       setMessages((current) => {
@@ -82,8 +94,10 @@ export default function DemoCall({ lastEvent, health }) {
         return [...current, { role: data.role, content: data.content, at: Date.now() }]
       })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastEvent])
+    if (type === 'call.ended' && callRef.current.mode === 'phone') {
+      setCall((current) => (current ? { ...current, ended: true, summary: data.summary } : current))
+    }
+  })
 
   const handleRecognised = (text) => {
     if (text?.trim()) submitTurn(text.trim())

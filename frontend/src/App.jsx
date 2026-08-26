@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Route, Routes } from 'react-router-dom'
 
 import Layout from './components/Layout'
@@ -17,10 +17,15 @@ import Training from './pages/Training'
 export default function App() {
   const [health, setHealth] = useState(null)
   const [healthError, setHealthError] = useState(null)
-  const [lastEvent, setLastEvent] = useState(null)
+  const [events, setEvents] = useState([])
+  const seqRef = useRef(0)
 
-  // One socket for the whole app; pages subscribe by reading `lastEvent`.
-  const handleEvent = useCallback((event) => setLastEvent(event), [])
+  // One socket for the whole app. Events are buffered with a sequence number
+  // so batched React updates cannot silently drop any of them.
+  const handleEvent = useCallback((event) => {
+    seqRef.current += 1
+    setEvents((prev) => [...prev.slice(-199), { ...event, _seq: seqRef.current }])
+  }, [])
   const { connected } = useWebSocket(handleEvent)
 
   useEffect(() => {
@@ -41,12 +46,12 @@ export default function App() {
   return (
     <Layout connected={connected} health={health} healthError={healthError}>
       <Routes>
-        <Route path="/" element={<Dashboard lastEvent={lastEvent} />} />
-        <Route path="/demo" element={<DemoCall lastEvent={lastEvent} health={health} />} />
+        <Route path="/" element={<Dashboard events={events} />} />
+        <Route path="/demo" element={<DemoCall events={events} health={health} />} />
         <Route path="/leads" element={<Leads />} />
         <Route path="/leads/:id" element={<LeadDetail />} />
         <Route path="/calls" element={<Calls />} />
-        <Route path="/callbacks" element={<Callbacks lastEvent={lastEvent} />} />
+        <Route path="/callbacks" element={<Callbacks events={events} />} />
         <Route path="/training" element={<Training />} />
         <Route path="/settings" element={<Settings health={health} onHealth={setHealth} />} />
       </Routes>

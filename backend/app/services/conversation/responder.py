@@ -301,6 +301,7 @@ class TemplateResponder:
         faq_answer: Optional[str] = None,
         actions: Optional[List[Dict[str, Any]]] = None,
         already_done: Optional[List[str]] = None,
+        last_agent_line: str = "",
     ) -> str:
         lang = memory.language if memory.language in ACK else "english"
         actions = actions or []
@@ -343,11 +344,20 @@ class TemplateResponder:
         follow_up = self._next_question(
             memory, turn, stage, lang, action_types, answered_faq=bool(faq_answer)
         )
-        if follow_up and _repeats(parts, follow_up):
-            # We just explained this; asking about it again sounds like a bot.
-            follow_up = _pick(NEXT_STEP, lang)
-        if not follow_up and stage in ("action", "qualification"):
-            follow_up = _pick(NEXT_STEP, lang)  # never dead-end the call
+
+        # Asking the identical question two turns running is the clearest tell
+        # that there is a machine on the line, so fall through to alternatives.
+        said_before = parts + ([last_agent_line] if last_agent_line else [])
+        candidates = [
+            follow_up,
+            _pick(NEXT_STEP, lang),
+            _pick(ASK_SIZE, lang) if not memory.size else None,
+            _pick(ASK_CATEGORY, lang) if not memory.clothing_categories else None,
+        ]
+        follow_up = next(
+            (c for c in candidates if c and not _repeats(said_before, c)),
+            None if stage not in ("action", "qualification") else _pick(NEXT_STEP, lang),
+        )
         if follow_up:
             parts.append(follow_up)
 

@@ -297,7 +297,12 @@ class ConversationEngine:
             if turn.asked_question
             else None
         )
-        fallback = self.responder.reply(memory, turn, stage, faq_answer, actions, already_done)
+        last_agent_line = next(
+            (m["content"] for m in reversed(transcript) if m["role"] == "agent"), ""
+        )
+        fallback = self.responder.reply(
+            memory, turn, stage, faq_answer, actions, already_done, last_agent_line
+        )
 
         if not self.llm.available:
             return fallback

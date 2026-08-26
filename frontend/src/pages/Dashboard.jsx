@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { LeadBadge, StatCard, useFetch } from '../components/common'
+import { useEventStream } from '../hooks/useEventStream'
 import { api } from '../services/api'
 
 const ACTIVITY_ICON = { call: '📞', whatsapp: '💬', callback: '📅' }
 
-export default function Dashboard({ lastEvent }) {
+export default function Dashboard({ events }) {
   const stats = useFetch(api.stats, [])
   const activity = useFetch(api.activity, [])
   const funnel = useFetch(api.funnel, [])
@@ -17,16 +18,14 @@ export default function Dashboard({ lastEvent }) {
   }, [])
 
   // Any live event means the numbers on this page just went stale.
-  useEffect(() => {
-    if (!lastEvent) return
-    if (['call.ended', 'lead.updated', 'whatsapp.sent', 'action.completed'].includes(lastEvent.type)) {
+  useEventStream(events, (event) => {
+    if (['call.ended', 'lead.updated', 'whatsapp.sent', 'action.completed'].includes(event.type)) {
       stats.reload()
       activity.reload()
       funnel.reload()
       api.listLeads('?status=HOT&limit=6').then(setHotLeads).catch(() => {})
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastEvent])
+  })
 
   const s = stats.data || {}
   const maxFunnel = Math.max(1, ...(funnel.data?.stages || []).map((stage) => stage.value))

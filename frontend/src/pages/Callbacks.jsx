@@ -1,21 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { useFetch, useToasts } from '../components/common'
+import { useEventStream } from '../hooks/useEventStream'
 import { api } from '../services/api'
 
-export default function Callbacks({ lastEvent }) {
+export default function Callbacks({ events }) {
   const { data: callbacks, reload } = useFetch(() => api.callbacks('?limit=200'), [])
   const [phrase, setPhrase] = useState('call me tomorrow evening around 6')
   const [parsed, setParsed] = useState(null)
   const { push, host } = useToasts()
 
-  useEffect(() => {
-    if (lastEvent?.type === 'callback.due') {
-      push(`⏰ Callback due: ${lastEvent.data.customer_name || lastEvent.data.phone_number}`, 'warn')
+  useEventStream(events, (event) => {
+    if (event.type === 'callback.due') {
+      push(`⏰ Callback due: ${event.data.customer_name || event.data.phone_number}`, 'warn')
       reload()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastEvent])
+  })
 
   async function parse() {
     try {

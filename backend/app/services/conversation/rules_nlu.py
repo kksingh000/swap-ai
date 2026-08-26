@@ -353,6 +353,24 @@ NAME_RE = re.compile(
     re.I,
 )
 
+# "I am planning to pick up soon" must not make the customer's name "Planning".
+# These are the words that commonly follow "I am" without being a name.
+NOT_A_NAME = {
+    "planning", "looking", "interested", "calling", "trying", "thinking", "going",
+    "buying", "selling", "checking", "asking", "waiting", "working", "driving",
+    "speaking", "listening", "wondering", "hoping", "busy", "sorry", "fine",
+    "good", "great", "okay", "ok", "sure", "free", "available", "here", "there",
+    "just", "not", "still", "really", "actually", "from", "in", "at", "on",
+    "a", "an", "the", "so", "very", "too", "quite", "done", "ready", "afraid",
+    "glad", "happy", "keen", "curious", "new", "same", "with", "confused",
+}
+
+
+def _valid_name(candidate: str) -> bool:
+    token = candidate.strip(".'").lower()
+    return len(token) >= 2 and token.isalpha() and token not in NOT_A_NAME
+
+
 CITY_RE = re.compile(
     r"\b(delhi|new delhi|noida|greater noida|gurgaon|gurugram|ghaziabad|faridabad|"
     r"mumbai|pune|bangalore|bengaluru|hyderabad|chennai|kolkata|jaipur|lucknow|"
@@ -481,7 +499,11 @@ def extract_turn(text: str, agent_asked: Optional[str] = None) -> TurnExtraction
         urgency=urgency,
         location=city_match.group(1).title() if city_match else None,
         barriers=barriers,
-        customer_name=name_match.group(1).title() if name_match else None,
+        customer_name=(
+            name_match.group(1).title()
+            if name_match and _valid_name(name_match.group(1))
+            else None
+        ),
         sentiment=sentiment,
         buying_intent=buying_intent,
         requires_whatsapp=wants_catalog,

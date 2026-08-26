@@ -177,7 +177,9 @@ class CustomerMemory(BaseModel):
             self.location = turn.location
         if turn.barriers:
             self.barriers = add_all(self.barriers, turn.barriers)
-        if turn.customer_name:
+        # Never overwrite a name we already have: the caller record is more
+        # reliable than a mid-sentence guess.
+        if turn.customer_name and not self.customer_name:
             self.customer_name = turn.customer_name
         if turn.asked_question:
             self.questions_asked = add_all(self.questions_asked, [turn.asked_question])
