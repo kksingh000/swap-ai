@@ -120,7 +120,9 @@ export default function DemoCall({ lastEvent, health }) {
       setExtracted(null)
       setActions([])
       setWaMessages([])
-      tts.speak(result.opening_message, 'english')
+      // Browser TTS is the demo's "phone line". On a real call Twilio speaks
+      // to the customer, so speaking here would just talk at the operator.
+      if (!phoneMode) tts.speak(result.opening_message, 'english')
 
       if (phoneMode) {
         const status = result.telephony?.status
@@ -156,7 +158,9 @@ export default function DemoCall({ lastEvent, health }) {
         const ids = new Set(current.map((a) => a.action_id))
         return [...current, ...result.actions.filter((a) => !ids.has(a.action_id))]
       })
-      tts.speak(result.reply, result.memory?.language || 'english')
+      if (active.mode !== 'phone') {
+        tts.speak(result.reply, result.memory?.language || 'english')
+      }
 
       if (result.should_end) {
         push('Agent closed the call.', 'info')
@@ -362,12 +366,28 @@ export default function DemoCall({ lastEvent, health }) {
                 {call.customer?.phone_number} · {call.mode === 'phone' ? 'Phone' : 'Browser demo'} · call
                 #{call.call_id}
               </div>
+              {call.mode === 'phone' && call.telephony && (
+                <div className="faint mono" style={{ marginTop: 2 }}>
+                  {call.telephony.status === 'failed' ? (
+                    <span style={{ color: 'var(--danger)' }}>
+                      Twilio rejected the call: {call.telephony.error}
+                    </span>
+                  ) : (
+                    <>
+                      Twilio {call.telephony.status}
+                      {call.telephony.call_sid ? ` · ${call.telephony.call_sid}` : ''}
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div className="row">
-            <button className="btn-sm" onClick={() => tts.setEnabled(!tts.enabled)}>
-              {tts.enabled ? '🔊 Voice on' : '🔇 Voice off'}
-            </button>
+            {call.mode !== 'phone' && (
+              <button className="btn-sm" onClick={() => tts.setEnabled(!tts.enabled)}>
+                {tts.enabled ? '🔊 Voice on' : '🔇 Voice off'}
+              </button>
+            )}
             {selected && !call.ended && (
               <button className="btn-sm" onClick={autoPlay} disabled={autoPlaying || thinking}>
                 {autoPlaying ? '▶ Playing…' : '▶ Auto-play scenario'}
