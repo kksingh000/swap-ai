@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     API_PREFIX: str = "/api"
     PUBLIC_BASE_URL: str = "http://localhost:8000"  # ngrok URL when using Twilio
     CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000"
+    # Vercel mints a fresh hostname for every deployment, so an exact-origin
+    # list alone breaks on each redeploy. Deployment-specific; set per env.
+    CORS_ORIGIN_REGEX: str = ""
 
     # ---------- Database ----------
     # SQLite locally (FREE, zero setup) / Postgres in production.

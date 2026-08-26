@@ -33,6 +33,11 @@ services:
         value: sqlite:///./swap_agent.db
       - key: CORS_ORIGINS
         value: https://swap-ai-tau.vercel.app,http://localhost:5173
+      # Vercel gives every deployment its own hostname, so the stable domain
+      # above is not enough - preview builds would be blocked by CORS. This
+      # matches this account's deployments only, not all of vercel.app.
+      - key: CORS_ORIGIN_REGEX
+        value: ^https://swap-[a-z0-9-]+-kksingh000s-projects\.vercel\.app$
       # Twilio calls back to this, so it must be the public https origin.
       - key: PUBLIC_BASE_URL
         value: https://swap-ai-backend.onrender.com
